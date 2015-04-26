@@ -1,0 +1,85 @@
+---
+title: "Statistcal Infererence - Course Project"
+author: "Luke Moss"
+date: "Sunday, April 26, 2015"
+output:
+  pdf_document:
+    fig_caption: yes
+  html_document: default
+---
+
+```{r,echo=FALSE}
+# load packages
+if(!is.element("ggplot2", installed.packages()[,1])){
+    install.packages("ggplot2", repos="http://cran.rstudio.com/")
+}
+library(ggplot2)
+```
+
+#Overview
+This project will investigate the exponential distribution in R and compare it with the Central Limit Theorem by conducting 1000 simulations with the distribution of 40 exponentials.  The goal is to illustrate the properties of the distribution of the mean of the 40 exponentials.  The following will be shown and discussed:
+
+> 1. Show the sample mean and compare it to the theoretical mean of the distribution.
+> 2. Show how variable the sample is (via variance) and compare it to the theoretical variance of the distribution.
+> 3. Show that the distribution is approximately normal.
+
+#Simulations
+First, set the seed to ensure everything is reproducible.  Then, run the simulations to generate the data.
+```{r}
+set.seed(5)
+lambda <- 0.2; 
+expon <- 40; 
+sim <- 1000
+data <- data.frame(
+    x  = apply(matrix(rexp(expon * sim, lambda), sim), 1, mean),
+    sz = factor(rep(expon, sim)))
+```
+
+#Sample Means vs Theoretical Mean
+The first objective is to compare the sample mean to the theoretical mean.  The sample mean is calculated against the simulated data.  The theoretical mean is calculated against the exponential distribution which is `1/lambda`.
+
+```{r}
+sim_mean <- mean(data$x);
+theo_mean <- 1/lambda;
+c("Simulation Mean"=sim_mean, "Theoretical Mean"=theo_mean)
+```
+
+###Result
+The sample mean (`r sim_mean`) and the theoretical mean (`r theo_mean`) are very close, but not identical.
+
+#Sample Variance vs Theoretical Variance
+The second objective is to compare the sample variance to the theoretical variance.  The sample variance is calculated in R using the standard deviation function.  The theoretical variance is calculated using the Central Limit Theorem ($\sigma/\sqrt{n}$) where $\sigma =$ equals `1/lambda` and n is the number of exponentials (`r expon`).
+
+```{r}
+sim_variance <- sd(data$x); 
+theo_variance <- (1/lambda) / sqrt(expon);
+c("Simulated Variance"=sim_variance, "Theoretical Variance"=theo_variance)
+```
+
+###Result
+Similar to the means, the sample variance (`r sim_variance`) and the theoretical variance (`r theo_variance`) are close, but not the same.
+
+#Distribution
+The next objective is to show that the distribution of the simulated data is approximately normal. To illustrate this I will make two plots: A comparison to a normal probability density distribution curve and a q-q plot.
+
+###Comparison to a Normal Probability Density Distrubution Curve
+The plot below shows the simulated data against a normal probability density distribution curve. The parameters for this plot are the `sim_mean` and the `sim_variance`. The profile of the density curve very closely matches the profile of the simulation data. 
+
+```{r, echo=FALSE, fig.height=3}
+g <- ggplot(data, aes(x = x)) + 
+    ylab("Density") +
+    xlab("Means of Exponentials (lambda = 0.2)")
+g <- g + geom_histogram(binwidth=.2, colour="black",
+                      fill="red", aes(y = ..density..)) 
+g <- g + stat_function(fun = dnorm, size = 1, args = list(sim_mean, sim_variance))
+    g + geom_vline(aes(xintercept=sim_mean), linetype="dashed", size=1)
+```
+
+###Quantile by Quantile Comparison
+The plot  below compares, by quantile, the simulated data with a normal standard distribution. This is known as a q-q plot.  To build this comparison, the distribution of the simulation mean is calculated using $\bar{Z} = \frac{\bar{X} -\mu_X}{\sigma_X}$. The plot below illustrates that much of the simulated data sits very close to the line with exceptions at the far left and far right.  This indicates a very close match with the theoretical quantiles.
+
+```{r, echo=FALSE, fig.height=3}
+qqx <- (data$x - sim_mean) / sim_variance
+qqnorm(qqx, ylab = "Simulation Quantiles", xlab = "Theoretical Quantiles", main="")
+qqline(qqx, col=I('red'))
+```
